@@ -24,8 +24,7 @@
 
 -   Running the code: *Explain how users can best run the code, for example by running a run all script.*
 -   Updating guidelines: *Outline the process for updating and contributing to the repository, including specific scripts and lines where updates are frequently needed. Describe how to get changes reviewed.*
-
--   change something
+Another vhange
 -   Issue reporting: *Explain how to report issues or suggest improvements. This could be through issues if using GitHub, boards in Azure DevOps or by emailing the team.*
 
 ## Contact details
