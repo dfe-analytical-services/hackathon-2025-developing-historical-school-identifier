@@ -10,7 +10,14 @@ editor: visual
 
 ```{R}
 
+# Set up filepath ------------------------------------
 
-# links_edubasealldata20250903
+FolderPath = paste0("C:/Users/cbousfield/OneDrive - Department for Education/Documents/9. Sep 2025/Hackathon/data/")
+
+# Define the full path to the links data CSV file
+filePath_links <- paste0(FolderPath, "links_edubasealldata20250903.csv")
+
+# Read the CSV file
+data <- read.csv(filePath_links, stringsAsFactors = FALSE)
 
 ```
