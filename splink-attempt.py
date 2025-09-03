@@ -1,11 +1,10 @@
+# pip.main(['install', 'splink'])
+# pip.main(['install', 'pyspark'])
+# pip.main(['install', 'duckdb'])
+# pip.main(['install', 'pyarrow'])
+# pip.main(['install', 'pandas'])
+
 import pip
-
-pip.main(['install', 'splink'])
-pip.main(['install', 'pyspark'])
-pip.main(['install', 'duckdb'])
-pip.main(['install', 'pyarrow'])
-
-
 import splink
 import pyspark 
 
@@ -16,7 +15,7 @@ from pyspark.sql.types import StringType
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import expr
 from pyspark.sql.functions import transform, sequence
-
+import pandas as pd
 import pyarrow as pa
 
 
@@ -32,6 +31,7 @@ from splink.blocking_analysis import (
 )
 from splink import DuckDBAPI, Linker, SettingsCreator, block_on
 from splink.exploratory import completeness_chart
+import csv
 
 # Set up DuckDB in memory
 # In theory we can set this to a path on the local drive, but it will be slower
@@ -58,13 +58,13 @@ def cleanse_names(column):
     cleaned = regexp_replace(trim(cleaned), r"\s+", " ")  # normalize whitespace
     return when(cleaned == "", None).otherwise(cleaned)  # nullify empty strings
 
+gias = pd.read_csv('gias_data.csv')
+
+print(duckdb.from_df(gias).head())
 
 
-
-
-
-gias_data_appended = (
-    combined_data.withColumn("last_name", cleanse_names(col("last_name")))
+gias_data_edited = (
+    gias.withColumn("last_name", cleanse_names(col("last_name")))
     .withColumn(
         "last_last_name",
         element_at(
@@ -103,9 +103,7 @@ gias_data_appended = (
 
 # toArrow makes it available to DuckDB
 # This gets loaded in memory so should already be small at this point.
-gias_data_arw = gias_data_appended.toArrow()
-
-
+gias_data_arw = gias_data_edited.toArrow()
 
 
 completeness_chart(
