@@ -219,8 +219,6 @@ Hakin_eg %>%
 
 There are `r num_predecessor_date_diff` cases in the current links data where the Establishment link data differs by atleast 30 days to the closing data in the edubase_all data.
 
-<br><br>Below is a snippet:
-
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
 predeccessor_date_diffs_30_plus %>%
