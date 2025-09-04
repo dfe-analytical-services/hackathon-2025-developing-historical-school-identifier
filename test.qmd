@@ -1,22 +1,31 @@
 ---
-title: "test"
-author: "cb"
-format: html
+title: "GIAS links data"
+format: 
+  html:
+    fig-width: 8
+    fig-height: 5
+    code-fold: true
+    embed-resources: true
+    self-contained-math: true
+    toc: false
 editor: visual
+date: "`r Sys.Date()`"
 ---
 
 
-```{R, echo = FALSE}
+```{R, include = FALSE}
 
 library(dplyr)
 library(stringr)
 library(lubridate)
+library(knitr)
+library(kableExtra)
 ```
 
 
+```{R, include = FALSE}
 # load data
 
-```{R}
 
 # Set up filepath ------------------------------------
 
@@ -35,7 +44,7 @@ data_edubase_all <- read.csv(filePath_educase_all, stringsAsFactors = FALSE)
 
 ```
 
-```{R}
+```{R, include = FALSE}
 
 links_full_data <- data_links %>%
   rename("other_URN" = URN) %>%
@@ -43,7 +52,7 @@ links_full_data <- data_links %>%
 
 ```
 
-```{R}
+```{R, include = FALSE}
 
 check_name <- links_full_data %>%
   filter(LinkName != EstablishmentName)
@@ -76,15 +85,10 @@ amalgamated_successors <- all_successors %>%
   filter(LinkType == "Successor - amalgamated")
 
 
-successor_date_diffs <- all_successors %>%
-  mutate(
-    LinkEstablishedDate <- gsub("-", "", LinkEstablishedDate),
-    LinkEstablishedDate = dmy(LinkEstablishedDate), 
-    OpenDate <- gsub("-", "", OpenDate),
-    OpenDate = dmy(OpenDate),
-    date_diff = abs(difftime(LinkEstablishedDate, OpenDate, units = "days"))
-  ) %>%
-  filter(date_diff > 1)
+```
+
+```{R, include = FALSE}
+# predecessor - different Establishment link data to close date
 
 all_predeccessors <- links_full_data %>%
   filter(str_starts(LinkType, "Predecessor"))
@@ -99,4 +103,92 @@ predeccessor_date_diffs_30_plus <- all_predeccessors %>%
   ) %>%
   filter(date_diff > 29)
 
+num_predecessor_date_diff <- nrow(predeccessor_date_diffs_30_plus)
+
 ```
+
+```{R, include = FALSE}
+# school never linked or changed
+
+not_linked <- anti_join(data_edubase_all, data_links, by = "URN")
+num_not_linked <- nrow(not_linked)
+
+check_not_linked_status <- not_linked %>%
+  distinct(EstablishmentStatus..name.)
+# 1.Open
+# 2.Closed
+# 3.Open, but proposed to close
+# 4.Proposed to open
+
+# 1.open
+not_linked_and_open <- not_linked %>%
+  filter(EstablishmentStatus..name. == "Open")
+
+num_not_linked_and_open <- nrow(not_linked_and_open)
+
+# 2. closed
+not_linked_and_closed <- not_linked %>%
+  filter(EstablishmentStatus..name. == "Closed")
+
+num_not_linked_and_closed <- nrow(not_linked_and_closed)
+
+# 3. open and proposed to close
+not_linked_open_proposed_close <- not_linked %>%
+  filter(EstablishmentStatus..name. == "Open, but proposed to close")
+
+num_not_linked_open_proposed_close <- nrow(not_linked_open_proposed_close)
+
+# 4.proposed to open
+not_linked_proposed_open <- not_linked %>%
+  filter(EstablishmentStatus..name. == "Proposed to open")
+
+num_not_linked_proposed_open <- nrow(not_linked_proposed_open)
+
+```
+
+# schools not in the links dataset
+
+There are `r num_not_linked` schools not in the links dataset.
+`r num_not_linked_and_open` of these are open and are not proposed to close.
+`r num_not_linked_open_proposed_close` of these are open but proposed to close.
+`r num_not_linked_proposed_open` of these are proposed to open.
+`r num_not_linked_and_closed` of these are closed.
+
+# Number of link types
+
+```{R, echo = FALSE, message = FALSE, warning = FALSE}
+
+summary_link_types
+
+```
+
+# Examples
+
+Torriano = infant school became primary - no record of previous junior or primary
+Abbey_hill_eg = dates not match (see predecessor date section)
+Trinity_eg = fine. Just showing a school can be a predecessor of itself - academisation.
+
+```{R, echo = FALSE, message = FALSE, warning = FALSE}
+
+Torriano_eg
+Abbey_hill_eg
+Trinity_eg
+
+```
+
+# Predecessors with different Establishment link data to close date (by 30+ days)
+
+There are `r num_predecessor_date_diff` cases in the current links data where the Establishment link data differs by atleast 30 days to the closing data in the edubase_all data
+
+```{R, echo = FALSE, message = FALSE, warning = FALSE}
+
+predeccessor_date_diffs_30_plus 
+
+```
+
+# infants and juniors to primary - JT
+
+# primary and secondary to all through - ST
+
+# all girls/boys to mixed - ST
+
