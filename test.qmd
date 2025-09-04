@@ -160,10 +160,10 @@ num_not_linked_proposed_open <- nrow(not_linked_proposed_open)
 # schools not in the links dataset
 
 There are `r num_not_linked` schools not in the links dataset.
-`r num_not_linked_and_open` of these are open and are not proposed to close.
-`r num_not_linked_open_proposed_close` of these are open but proposed to close.
-`r num_not_linked_proposed_open` of these are proposed to open.
-`r num_not_linked_and_closed` of these are closed.
+<br>`r num_not_linked_and_open` of these are open and are not proposed to close.
+<br>`r num_not_linked_open_proposed_close` of these are open but proposed to close.
+<br>`r num_not_linked_proposed_open` of these are proposed to open.
+<br>`r num_not_linked_and_closed` of these are closed.
 
 # Number of link types
 
