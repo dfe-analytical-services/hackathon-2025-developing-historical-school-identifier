@@ -246,9 +246,39 @@ predeccessor_date_diffs_30_plus %>%
 
 # full_history
 
+# links data - URN vs linkURN
+
 ```{R, include = FALSE}
 
 
+# URNs not in LinkURN
+urn_not_in_linkurn <- setdiff(unique(data_links$URN), unique(data_links$LinkURN))
+
+# LinkURNs not in URN
+linkurn_not_in_urn <- setdiff(unique(data_links$LinkURN), unique(data_links$URN))
+
+
+urn_not_in_linkurn_df <- data.frame(URN = urn_not_in_linkurn)
+linkurn_not_in_urn_df <- data.frame(LinkURN = linkurn_not_in_urn)
+
+# random check
+check_random_1a <- data_links %>%
+  filter(URN == "111111")
+
+check_random_1b <- data_links %>%
+  filter(LinkURN == "111111")
+
+check_random_2a <- data_links %>%
+  filter(URN == "151595")
+
+check_random_2b <- data_links %>%
+  filter(LinkURN == "151595")
+
+check_random_2c <- data_links %>%
+  filter(LinkURN == "100152")
+
+check_random_2d <- data_links %>%
+  filter(URN == "100152")
 
 ```
 
