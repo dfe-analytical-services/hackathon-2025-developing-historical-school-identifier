@@ -268,6 +268,12 @@ check_random_1a <- data_links %>%
 check_random_1b <- data_links %>%
   filter(LinkURN == "111111")
 
+check_random_1c <- data_edubase_all %>%
+  filter(URN == "135256")
+
+check_random_1d <- data_edubase_all %>%
+  filter(URN == "111111")
+
 check_random_2a <- data_links %>%
   filter(URN == "151595")
 
@@ -281,6 +287,22 @@ check_random_2d <- data_links %>%
   filter(URN == "100152")
 
 ```
+Is this issue with the links dataset worth mentioning?
 
+
+
+Links dataset: Supposed to show successors and predecessors so both ways
+
+
+
+There's 429 URNs not in LinkURN 
+
+There's 344 LinkURNs not in URN 
+
+
+
+eg) '135256' is a successor of '111111' but this is only shown in 1 row - '111111' is not in LinkURN as a predecessor and '125256' is not in URN.
+
+Checked edubase_all and the predecessor 111111 is a junior of the nursery & primary which was the successor. URN 111111 doesn't appear in search on Get Information about Schools - GOV.UK or Google.
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 ```
