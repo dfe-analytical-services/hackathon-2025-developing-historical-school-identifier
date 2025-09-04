@@ -4,18 +4,13 @@
 # pip.main(['install', 'pyarrow'])
 # pip.main(['install', 'pandas'])
 
+from itertools import count
 import pip
+from requests import head
 import splink
 import pyspark 
-
-from pyspark.sql.functions import col, monotonically_increasing_id, expr, concat_ws, lit, split
-from pyspark.sql.functions import col, date_format, lower, regexp_replace, expr, trim, when, greatest
-from pyspark.sql.functions import concat_ws, col, split, slice, element_at, size, to_date, coalesce
-from pyspark.sql.types import StringType
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import expr
-from pyspark.sql.functions import transform, sequence
 import pandas as pd
+import re 
 import pyarrow as pa
 
 
@@ -47,85 +42,118 @@ con.execute("SET max_temp_directory_size = '200GB';")
 db_api = DuckDBAPI(con)
 
 
-def remove_special_chars(column):
-    cleaned = regexp_replace(lower(column), "[^a-zA-Z0-9]", "")
-    return when(cleaned == "", None).otherwise(cleaned) 
+# read gias data
+gias = pd.read_csv('Data/gias_data2024-03-01_2024-09-01_28.csv')
 
 
-def cleanse_names(column):
-    cleaned = lower(column)
-    cleaned = regexp_replace(cleaned, "[^a-zA-Z0-9 ]", "")  # remove special chars
-    cleaned = regexp_replace(trim(cleaned), r"\s+", " ")  # normalize whitespace
-    return when(cleaned == "", None).otherwise(cleaned)  # nullify empty strings
+print(duckdb.from_df(gias).df().head())
 
-gias = pd.read_csv('gias_data.csv')
+# clean nulls 
 
-print(duckdb.from_df(gias).head())
-
-
-gias_data_edited = (
-    gias.withColumn("last_name", cleanse_names(col("last_name")))
-    .withColumn(
-        "last_last_name",
-        element_at(
-            split(col("last_name"), " "), -1
-        ),  # take last word as last name so double barrel dropped if not hyphenated
+for col_name in gias.columns:
+    gias[col_name] = gias[col_name].replace(
+        to_replace=[r"^\s*$", r"^NA$", r"^NA NA$", r"^na$", r"^NaN$", r"^nan$", r"^N/A$", r"^n/a$"],
+        value=pd.NA,
+        regex=True
     )
-    .withColumn("middle_names", cleanse_names(col("middle_names")))
-    .withColumn("first_names", cleanse_names(col("first_names")))
-    .withColumn("first_name", element_at(split(col("first_names"), " "), 1))
-    .withColumn(
-        "middle_names",
-        when(
-            col("middle_names")
-            == concat_ws(" ", slice(split(col("first_names"), " "), 2, 100)),
-            col("middle_names"),
-        ).otherwise(
-            concat_ws(
-                " ", col("middle_names"), slice(split(col("first_names"), " "), 2, 100)
-            )
-        ),
-    )
-    .withColumn(
-        "middle_names",
-        when(trim(col("middle_names")) == "", None).otherwise(
-            trim(col("middle_names"))
-        ),
-    )
-    .withColumn(
-        "full_name",
-        concat_ws(" ", col("first_name"), col("middle_names"), col("last_name")),
-    )
-).withColumn(
-    "unique_id", monotonically_increasing_id()
-)
+
+# issue with mixed data types in laestab
+gias['laestab'] = gias['laestab'].astype(str)
+
+    
+def cleanse_names(series: pd.Series) -> pd.Series:
+    """
+    Clean text columns similar to your Spark UDF logic.
+    """
+    # lowercase
+    cleaned = series.str.lower()
+
+    # remove special characters (keep only letters, digits, space)
+    cleaned = cleaned.str.replace(r"[^a-z0-9 ]", "", regex=True)
+
+    # normalize whitespace
+    cleaned = cleaned.str.strip().str.replace(r"\s+", " ", regex=True)
+
+    # replace empty strings with None/NaN
+    cleaned = cleaned.replace("", pd.NA)
+
+    return cleaned
 
 
-# toArrow makes it available to DuckDB
-# This gets loaded in memory so should already be small at this point.
-gias_data_arw = gias_data_edited.toArrow()
+cols_to_clean = [
+    "heads_name",
+    "establishment_name",
+    "previous_establishment_number",
+    "trusts_name",
+]
+
+for c in cols_to_clean:
+    gias[c] = cleanse_names(gias[c].astype(str))
+
+
+    # Ensure all columns are strings for Splink
+    for col in gias.columns:
+        gias[col] = gias[col].astype(str)
+
+# Drop duplicates ignoring 'gias_date' column
+cols_to_check = [c for c in gias.columns if c != "gias_date"]
+
+
+gias = gias.drop(columns=['Unnamed: 0'])
+subset = gias.columns.difference(['gias_date'])
+
+gias = gias.drop_duplicates(subset=subset)
+
+
+print(gias.columns)
+
+print(len(gias))
+
+gias_1 = gias.copy()
+
+gias_2 = gias.copy()    
+
+
+
+
+# Add unique_id (sequential)
+gias_1["unique_id"] = range(1, len(gias_1) + 1)
+gias_2["unique_id"] = range(1, len(gias_2) + 1)
+
+# # toArrow makes it available to DuckDB
+# # This gets loaded in memory so should already be small at this point.
+# gias_1_data_arw = pa.Table.from_pandas(gias_1)
+# gias_2_data_arw = pa.Table.from_pandas(gias_2)
 
 
 completeness_chart(
-    gias_data_arw,
+    gias_1,
     db_api=db_api)
 
 
-profile_columns(gias_data_arw, db_api, column_expressions=["first_name","last_last_name","full_name"])
+profile_columns(gias_1, db_api=db_api, column_expressions=["ukprn"])"])
 
+profile_columns(gias_1, db_api=db_api, column_expressions=["heads_name"])
 
-blocking_rules_dedupe = [
+print(gias.columns)
+
+print(len(gias_1))
+
+blocking_rules_link = [
     block_on("urn"),
-    block_on("la_estab"),
-    block_on("headteacher_name"),
-    block_on("ukprn"),
-    block_on("postcode"),
-    block_on("phase")
+    block_on("establishment_name"),
+    block_on("laestab"),
+# cant sort this   block_on("previous_establishment_number = establishment_name"),
+   # block_on("ukprn"), something wrong with this
+   block_on("northing", "easting"),
+   block_on("trusts_name", "postcode"),
+   block_on("heads_name"),
+ #   block_on("phase_of_education_name", "postcode"),
 ]
 
 cumulative_comparisons_to_be_scored_from_blocking_rules_chart(
-    table_or_tables=gias_data_arw,
-    blocking_rules=blocking_rules_dedupe,
+    table_or_tables=[gias_1,gias_2],
+    blocking_rules=blocking_rules_link,
     db_api=db_api,
     link_type="link_only",
 )
@@ -133,64 +161,75 @@ cumulative_comparisons_to_be_scored_from_blocking_rules_chart(
 
 # custom comparison for full_name
 
-headteacher_name_comparison = CustomComparison(
-    output_column_name="headteacher_name",
-    comparison_levels=[
-        cll.NullLevel("headteacher_name"),
-        cll.ExactMatchLevel("headteacher_name").configure(tf_adjustment_column="headteacher_name"),
-        cll.JaroWinklerLevel("headteacher_name", 0.9).configure(tf_adjustment_column="headteacher_name"),
-        cll.ElseLevel(),
-    ],
-)
+# headteacher_name_comparison = CustomComparison(
+#     output_column_name="heads_name",
+#     comparison_levels=[
+#         cll.NullLevel("heads_name"),
+#         cll.ExactMatchLevel("heads_name").configure(tf_adjustment_column="heads_name"),
+#         cll.JaroWinklerLevel("heads_name", 0.9).configure(tf_adjustment_column="heads_name"),
+#         cll.ElseLevel(),
+#     ],
+# )
 
-northing_easting_comparison = CustomComparison(
-  output_column_name="northing_easting",
-  comparison_levels=[
-    cll.NullLevel("easting", "northing"),
-    {
-      "sql_condition": "(a.easting IS NOT NULL AND b.easting IS NOT NULL AND (a.easting - b.easting)*(a.easting - b.easting) < 10000)",
-      "label": "Squared difference of easting < 10000",
-      "tf_adjustment_column": "easting"
-    },
-    cll.ElseLevel(),
-  ],
-)
+# from splink.comparison_library import CustomComparison
+# from splink.comparison_level_library import comparison_level_library as cll
 
-print(headteacher_name_comparison.get_comparison("duckdb").human_readable_description)
+
+# northing_easting_comparison = CustomComparison(
+#     output_column_name="northing_easting_distance",
+#     comparison_levels=[
+#         cll.NullLevel("easting", "northing"),  # level 0: nulls
+#         {
+#             "sql_condition": """
+#                 (a.easting IS NOT NULL AND a.northing IS NOT NULL AND
+#                  b.easting IS NOT NULL AND b.northing IS NOT NULL AND
+#                  ((a.easting - b.easting)*(a.easting - b.easting) +
+#                   (a.northing - b.northing)*(a.northing - b.northing)) < 10000)
+#             """,
+#             "tf_adjustment_column": "easting"  # optional
+#         },
+#         cll.ElseLevel()  # everything else
+#     ]
+# )
+
+
+#print(headteacher_name_comparison.get_comparison("duckdb").human_readable_description)
 
 
 settings = SettingsCreator(
-    link_type="dedupe_only",
+    link_type="link_only",
     unique_id_column_name="unique_id",
-    blocking_rules_to_generate_predictions= blocking_rules_dedupe,
+    probability_two_random_records_match=1e-6,  # very small
+    blocking_rules_to_generate_predictions=blocking_rules_link,
     comparisons=[
         cl.ExactMatch("urn"),
-        cl.ExactMatch("ukprn"),
+        cl.ExactMatch("laestab"),
         cl.PostcodeComparison("postcode"),
         cl.NameComparison("establishment_name"),
-        headteacher_name_comparison,
-        cl.ExactMatch("establishment_status_name")
+     #   headteacher_name_comparison,
+      #  northing_easting_comparison
     ],
     retain_intermediate_calculation_columns=True,
 )
 
 linker = Linker(
-    gias_data_arw,
+    [gias_1,gias_2],
     settings,
     db_api=db_api,
     validate_settings=True,
 )
 
-
+# I dont seem able to train the model with this as too many matches on urn?
 
 linker.training.estimate_probability_two_random_records_match(
     [
-        block_on("urn","establishment_name")
+        #  block_on("establishment_name"),
+        block_on("urn"),
     ],
-    recall=0.96,
+    recall=0.1,
 )
 
-linker.training.estimate_u_using_random_sampling(max_pairs=1e8)
+linker.training.estimate_u_using_random_sampling(max_pairs=1e6)
 
 
 training_blocking_rule = block_on("urn")
@@ -208,4 +247,26 @@ linker.training.estimate_parameters_using_expectation_maximisation(
     blocking_rule=block_on("laestab"),
 )
 
+ linker.training.estimate_parameters_using_expectation_maximisation(
+     blocking_rule=block_on("postcode"),
+ )
+
 linker.visualisations.parameter_estimate_comparisons_chart()
+
+
+linker.visualisations.match_weights_chart()
+
+linker.evaluation.unlinkables_chart()
+
+df_predict = linker.inference.predict()
+
+df_e = df_predict.as_pandas_dataframe()
+
+df_e = df_e.sort_values(by="match_probability", ascending=False)
+
+
+filtered_df = df_e[df_e["match_probability"] > 0.6]
+
+print(f"Number of rows in that match: {len(filtered_df)}")
+
+print(f"Match percentage: {len(filtered_df)/len(df_e)}")
