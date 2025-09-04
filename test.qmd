@@ -12,7 +12,6 @@ editor: visual
 date: "`r Sys.Date()`"
 ---
 
-
 ```{R, include = FALSE}
 
 library(dplyr)
@@ -24,7 +23,6 @@ library(data.table)
 library(DT)
 
 ```
-
 
 ```{R, include = FALSE}
 # load data
@@ -121,8 +119,26 @@ num_predecessor_date_diff <- nrow(predeccessor_date_diffs_30_plus)
 ```{R, include = FALSE}
 # school never linked or changed
 
+#The summary figures may not be quite right - I done it on URN and not linkURN
+ 
+#I was assuming that there would be the same amount of URNs as LINKURNs as there should be a version for predecessor and successor. 
+#I think there are 29,929 different URNs and 29,845 different LinkURNs
+
 not_linked <- anti_join(data_edubase_all, data_links, by = "URN")
 num_not_linked <- nrow(not_linked)
+
+
+
+#not_linked_urn <- anti_join(data_edubase_all, data_links, by = "URN")
+#num_not_linked_urn <- nrow(not_linked_urn)
+
+#not_linked_linkurn <- anti_join(data_edubase_all, data_links, by = c("URN" = "LinkURN"))
+#num_not_linked_linkurn <- nrow(not_linked_linkurn)
+
+#anti1 <- anti_join(not_linked_urn, not_linked_linkurn, by = c("URN" = "LinkURN"))
+#anti2 <- anti_join(not_linked_linkurn, not_linked_urn, by = c("LinkURN" = "URN"))
+
+
 
 check_not_linked_status <- not_linked %>%
   distinct(EstablishmentStatus..name.)
@@ -157,13 +173,9 @@ num_not_linked_proposed_open <- nrow(not_linked_proposed_open)
 
 ```
 
-# schools not in the links dataset
+# schools not in the links dataset (note: needs checking, see comments)
 
-There are `r num_not_linked` schools not in the links dataset.
-<br>`r num_not_linked_and_open` of these are open and are not proposed to close.
-<br>`r num_not_linked_open_proposed_close` of these are open but proposed to close.
-<br>`r num_not_linked_proposed_open` of these are proposed to open.
-<br>`r num_not_linked_and_closed` of these are closed.
+There are `r num_not_linked` schools not in the links dataset. <br>`r num_not_linked_and_open` of these are open and are not proposed to close. <br>`r num_not_linked_open_proposed_close` of these are open but proposed to close. <br>`r num_not_linked_proposed_open` of these are proposed to open. <br>`r num_not_linked_and_closed` of these are closed.
 
 # Number of link types
 
@@ -192,13 +204,9 @@ summary_closures %>%
 
 ```
 
-
 # Examples
 
-Torriano = infant school became primary - no record of previous junior or primary
-<br>Abbey_hill_eg = dates not match (see predecessor date section)
-<br>Trinity_eg = fine. Just showing a school can be a predecessor of itself - academisation.
-<br>Hakin = ST: This school might be a good example, the junior and infant school merged to become a primary but the primary merged with another primary school. Only the second amalgamation is shown in the links data not the first ?
+Torriano = infant school became primary - no record of previous junior or primary <br>Abbey_hill_eg = dates not match (see predecessor date section) <br>Trinity_eg = fine. Just showing a school can be a predecessor of itself - academisation. <br>Hakin = ST: This school might be a good example, the junior and infant school merged to become a primary but the primary merged with another primary school. Only the second amalgamation is shown in the links data not the first ?
 
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
@@ -238,7 +246,7 @@ predeccessor_date_diffs_30_plus %>%
 
 # full_history
 
-```{R, include = FALSE} 
+```{R, include = FALSE}
 
 
 
