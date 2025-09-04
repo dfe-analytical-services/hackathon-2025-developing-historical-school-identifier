@@ -6,6 +6,14 @@ editor: visual
 ---
 
 
+```{R, echo = FALSE}
+
+library(dplyr)
+library(stringr)
+library(lubridate)
+```
+
+
 # load data
 
 ```{R}
@@ -14,10 +22,81 @@ editor: visual
 
 FolderPath = paste0("C:/Users/cbousfield/OneDrive - Department for Education/Documents/9. Sep 2025/Hackathon/data/")
 
-# Define the full path to the links data CSV file
+# Define the full path to CSV files
 filePath_links <- paste0(FolderPath, "links_edubasealldata20250903.csv")
+filePath_groups <- paste0(FolderPath, "groups.csv")
+filePath_educase_all <- paste0(FolderPath, "edubasealldata20250903.csv")
 
-# Read the CSV file
-data <- read.csv(filePath_links, stringsAsFactors = FALSE)
+# Read the CSV files
+data_links <- read.csv(filePath_links, stringsAsFactors = FALSE)
+data_groups <- read.csv(filePath_groups, stringsAsFactors = FALSE)
+data_edubase_all <- read.csv(filePath_educase_all, stringsAsFactors = FALSE)
+
+
+```
+
+```{R}
+
+links_full_data <- data_links %>%
+  rename("other_URN" = URN) %>%
+  left_join(data_edubase_all, by = c("LinkURN" = "URN"))
+
+```
+
+```{R}
+
+check_name <- links_full_data %>%
+  filter(LinkName != EstablishmentName)
+
+# infant predecessor to primary - showing no previous junior/primary
+Torriano_eg <- links_full_data %>%
+  filter((str_starts(LinkName, "Torriano")))
+
+# link established different to open and close dates
+Abbey_hill_eg <- links_full_data %>%
+  filter((str_starts(LinkName, "Abbey Hill Primary & Nursery")) 
+         & (str_ends(LinkEstablishedDate, "2023")))
+
+# fine
+Trinity_eg <- links_full_data %>%
+  filter((str_starts(LinkName, "Trinity Catholic College")))
+
+summary_link_types <- links_full_data %>%
+  group_by(LinkType) %>%
+  summarise(count = n())
+
+
+all_successors <- links_full_data %>%
+  filter(str_starts(LinkType, "Successor"))
+
+merged_successors <- all_successors %>%
+  filter(LinkType == "Successor - merged")
+
+amalgamated_successors <- all_successors %>%
+  filter(LinkType == "Successor - amalgamated")
+
+
+successor_date_diffs <- all_successors %>%
+  mutate(
+    LinkEstablishedDate <- gsub("-", "", LinkEstablishedDate),
+    LinkEstablishedDate = dmy(LinkEstablishedDate), 
+    OpenDate <- gsub("-", "", OpenDate),
+    OpenDate = dmy(OpenDate),
+    date_diff = abs(difftime(LinkEstablishedDate, OpenDate, units = "days"))
+  ) %>%
+  filter(date_diff > 1)
+
+all_predeccessors <- links_full_data %>%
+  filter(str_starts(LinkType, "Predecessor"))
+
+predeccessor_date_diffs_30_plus <- all_predeccessors %>%
+  mutate(
+    LinkEstablishedDate <- gsub("-", "", LinkEstablishedDate),
+    LinkEstablishedDate = dmy(LinkEstablishedDate), 
+    CloseDate <- gsub("-", "", CloseDate),
+    CloseDate = dmy(CloseDate),
+    date_diff = abs(difftime(LinkEstablishedDate, CloseDate, units = "days"))
+  ) %>%
+  filter(date_diff > 29)
 
 ```
