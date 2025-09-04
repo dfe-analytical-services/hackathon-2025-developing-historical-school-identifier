@@ -184,6 +184,10 @@ There are `r num_predecessor_date_diff` cases in the current links data where th
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
 predeccessor_date_diffs_30_plus %>%
+  
+  # Convert all character columns to UTF-8
+  mutate(across(where(is.character), ~ iconv(., from = "", to = "UTF-8", sub = "byte"))) %>%
+  
   kbl()
 
 ```
