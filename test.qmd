@@ -61,6 +61,14 @@ check_name <- links_full_data %>%
 Torriano_eg <- links_full_data %>%
   filter((str_starts(LinkName, "Torriano")))
 
+# Hakin - infant junior primary
+Hakin_eg <- links_full_data %>%
+  filter((str_starts(LinkName, "Hakin")))
+
+# check Hakin
+check_Hakin <- data_edubase_all %>%
+  filter((str_starts(EstablishmentName, "Hakin")))
+
 # link established different to open and close dates
 Abbey_hill_eg <- links_full_data %>%
   filter((str_starts(LinkName, "Abbey Hill Primary & Nursery")) 
@@ -163,17 +171,39 @@ summary_link_types %>%
 
 ```
 
+# summary GIAS
+
+```{R, include = FALSE}
+# number of closure types in edubase_all
+
+summary_closures <- data_edubase_all %>%
+  group_by(ReasonEstablishmentClosed..name.) %>%
+  summarise(count = n())
+
+```
+
+```{R, echo = FALSE, message = FALSE, warning = FALSE}
+
+summary_closures %>%
+  kbl()
+
+```
+
+
 # Examples
 
 Torriano = infant school became primary - no record of previous junior or primary
 <br>Abbey_hill_eg = dates not match (see predecessor date section)
 <br>Trinity_eg = fine. Just showing a school can be a predecessor of itself - academisation.
+<br>Hakin = ST: This school might be a good example, the junior and infant school merged to become a primary but the primary merged with another primary school. Only the second amalgamation is shown in the links data not the first ?
 
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
 Torriano_eg
 Abbey_hill_eg
 Trinity_eg
+check_Hakin
+Hakin_eg
 
 ```
 
@@ -198,3 +228,13 @@ predeccessor_date_diffs_30_plus %>%
 
 # all girls/boys to mixed - ST
 
+# full_history
+
+```{R, include = FALSE} 
+
+
+
+```
+
+```{R, echo = FALSE, message = FALSE, warning = FALSE}
+```
