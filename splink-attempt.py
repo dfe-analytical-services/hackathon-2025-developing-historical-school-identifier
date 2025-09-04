@@ -105,20 +105,20 @@ subset = gias.columns.difference(['gias_date'])
 gias = gias.drop_duplicates(subset=subset)
 
 
+gias["unique_id"] = range(1, len(gias) + 1)
+
+
 print(gias.columns)
 
 print(len(gias))
 
-gias_1 = gias.copy()
+# gias_1 = gias.copy()
 
-gias_2 = gias.copy()    
+# gias_2 = gias.copy()    
 
-
-
-
-# Add unique_id (sequential)
-gias_1["unique_id"] = range(1, len(gias_1) + 1)
-gias_2["unique_id"] = range(1, len(gias_2) + 1)
+# # Add unique_id (sequential)
+# gias_1["unique_id"] = range(1, len(gias_1) + 1)
+# gias_2["unique_id"] = range(1, len(gias_2) + 1)
 
 # # toArrow makes it available to DuckDB
 # # This gets loaded in memory so should already be small at this point.
@@ -127,79 +127,59 @@ gias_2["unique_id"] = range(1, len(gias_2) + 1)
 
 
 completeness_chart(
-    gias_1,
+    gias,
     db_api=db_api)
 
 
-profile_columns(gias_1, db_api=db_api, column_expressions=["ukprn"])"])
+profile_columns(gias, db_api=db_api, column_expressions=["ukprn"])"])
 
-profile_columns(gias_1, db_api=db_api, column_expressions=["heads_name"])
+profile_columns(gias, db_api=db_api, column_expressions=["heads_name"])
 
-print(gias.columns)
-
-print(len(gias_1))
-
-blocking_rules_link = [
-    block_on("urn"),
-    block_on("establishment_name"),
-    block_on("laestab"),
-# cant sort this   block_on("previous_establishment_number = establishment_name"),
-   # block_on("ukprn"), something wrong with this
-   block_on("northing", "easting"),
-   block_on("trusts_name", "postcode"),
-   block_on("heads_name"),
- #   block_on("phase_of_education_name", "postcode"),
-]
-
-cumulative_comparisons_to_be_scored_from_blocking_rules_chart(
-    table_or_tables=[gias_1,gias_2],
-    blocking_rules=blocking_rules_link,
-    db_api=db_api,
-    link_type="link_only",
-)
 
 
 # custom comparison for full_name
 
-# headteacher_name_comparison = CustomComparison(
-#     output_column_name="heads_name",
-#     comparison_levels=[
-#         cll.NullLevel("heads_name"),
-#         cll.ExactMatchLevel("heads_name").configure(tf_adjustment_column="heads_name"),
-#         cll.JaroWinklerLevel("heads_name", 0.9).configure(tf_adjustment_column="heads_name"),
-#         cll.ElseLevel(),
-#     ],
-# )
+headteacher_name_comparison = CustomComparison(
+    output_column_name="heads_name",
+    comparison_levels=[
+        cll.NullLevel("heads_name"),
+        cll.ExactMatchLevel("heads_name").configure(tf_adjustment_column="heads_name"),
+        cll.JaroWinklerLevel("heads_name", 0.9).configure(tf_adjustment_column="heads_name"),
+        cll.ElseLevel(),
+    ],
+)
 
 # from splink.comparison_library import CustomComparison
 # from splink.comparison_level_library import comparison_level_library as cll
 
 
-# northing_easting_comparison = CustomComparison(
-#     output_column_name="northing_easting_distance",
-#     comparison_levels=[
-#         cll.NullLevel("easting", "northing"),  # level 0: nulls
-#         {
-#             "sql_condition": """
-#                 (a.easting IS NOT NULL AND a.northing IS NOT NULL AND
-#                  b.easting IS NOT NULL AND b.northing IS NOT NULL AND
-#                  ((a.easting - b.easting)*(a.easting - b.easting) +
-#                   (a.northing - b.northing)*(a.northing - b.northing)) < 10000)
-#             """,
-#             "tf_adjustment_column": "easting"  # optional
-#         },
-#         cll.ElseLevel()  # everything else
-#     ]
-# )
+northing_easting_comparison = CustomComparison(
+    output_column_name="northing_easting_distance",
+    comparison_levels=[
+        cll.NullLevel("easting", "northing"),  # level 0: nulls
+        cll.ExactMatchLevel("easting", "northing"),
+
+        {
+            "sql_condition": """
+                (a.easting IS NOT NULL AND a.northing IS NOT NULL AND
+                 b.easting IS NOT NULL AND b.northing IS NOT NULL AND
+                 ((a.easting - b.easting)*(a.easting - b.easting) +
+                  (a.northing - b.northing)*(a.northing - b.northing)) < 10000)
+            """,
+            "tf_adjustment_column": "easting"  # close?
+        },
+        cll.ElseLevel()  # everything else
+    ]
+)
 
 
 #print(headteacher_name_comparison.get_comparison("duckdb").human_readable_description)
 
 
 settings = SettingsCreator(
-    link_type="link_only",
+    link_type="dedupe_only",
     unique_id_column_name="unique_id",
-    probability_two_random_records_match=1e-6,  # very small
+    # probability_two_random_records_match=1e-6,  # very small
     blocking_rules_to_generate_predictions=blocking_rules_link,
     comparisons=[
         cl.ExactMatch("urn"),
@@ -213,7 +193,7 @@ settings = SettingsCreator(
 )
 
 linker = Linker(
-    [gias_1,gias_2],
+    gias,
     settings,
     db_api=db_api,
     validate_settings=True,
@@ -225,14 +205,20 @@ linker.training.estimate_probability_two_random_records_match(
     [
         #  block_on("establishment_name"),
         block_on("urn"),
+       # block_on("laestab"),
+        #block_on("postcode"),
+       # block_on("heads_name"),
+      #  block_on("trusts_name"),
+     #   block_on("northing", "easting"),
     ],
-    recall=0.1,
+    recall=0.95,
 )
 
-linker.training.estimate_u_using_random_sampling(max_pairs=1e6)
+linker.training.estimate_u_using_random_sampling(max_pairs=1e10)
 
 
 training_blocking_rule = block_on("urn")
+
 training_session_names = (
     linker.training.estimate_parameters_using_expectation_maximisation(
         training_blocking_rule, estimate_without_term_frequencies=True
@@ -247,7 +233,7 @@ linker.training.estimate_parameters_using_expectation_maximisation(
     blocking_rule=block_on("laestab"),
 )
 
- linker.training.estimate_parameters_using_expectation_maximisation(
+linker.training.estimate_parameters_using_expectation_maximisation(
      blocking_rule=block_on("postcode"),
  )
 
