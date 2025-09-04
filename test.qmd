@@ -20,6 +20,9 @@ library(stringr)
 library(lubridate)
 library(knitr)
 library(kableExtra)
+library(data.table)  
+library(DT)
+
 ```
 
 
@@ -167,7 +170,7 @@ There are `r num_not_linked` schools not in the links dataset.
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
 summary_link_types %>%
-  kbl()
+  datatable(rownames = FALSE)
 
 ```
 
@@ -185,7 +188,7 @@ summary_closures <- data_edubase_all %>%
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
 summary_closures %>%
-  kbl()
+  datatable(rownames = FALSE)
 
 ```
 
@@ -200,15 +203,15 @@ Torriano = infant school became primary - no record of previous junior or primar
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
 Torriano_eg %>%
-    kbl()
+  datatable(rownames = FALSE)
 Abbey_hill_eg %>%
-    kbl()
+  datatable(rownames = FALSE)
 Trinity_eg %>%
-    kbl()
+  datatable(rownames = FALSE)
 check_Hakin %>%
-    kbl()
+  datatable(rownames = FALSE)
 Hakin_eg %>%
-    kbl()
+  datatable(rownames = FALSE)
 
 ```
 
@@ -222,12 +225,10 @@ There are `r num_predecessor_date_diff` cases in the current links data where th
 
 predeccessor_date_diffs_30_plus %>%
   
-  head(n=50) %>%
-  
   # Convert all character columns to UTF-8
   mutate(across(where(is.character), ~ iconv(., from = "", to = "UTF-8", sub = "byte"))) %>%
   
-  kbl()
+  datatable(rownames = FALSE)
 
 ```
 
