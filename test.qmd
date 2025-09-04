@@ -199,21 +199,30 @@ Torriano = infant school became primary - no record of previous junior or primar
 
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
-Torriano_eg
-Abbey_hill_eg
-Trinity_eg
-check_Hakin
-Hakin_eg
+Torriano_eg %>%
+    kbl()
+Abbey_hill_eg %>%
+    kbl()
+Trinity_eg %>%
+    kbl()
+check_Hakin %>%
+    kbl()
+Hakin_eg %>%
+    kbl()
 
 ```
 
 # Predecessors with different Establishment link data to close date (by 30+ days)
 
-There are `r num_predecessor_date_diff` cases in the current links data where the Establishment link data differs by atleast 30 days to the closing data in the edubase_all data
+There are `r num_predecessor_date_diff` cases in the current links data where the Establishment link data differs by atleast 30 days to the closing data in the edubase_all data.
+
+<br><br>Below is a snippet:
 
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
 predeccessor_date_diffs_30_plus %>%
+  
+  head(n=50) %>%
   
   # Convert all character columns to UTF-8
   mutate(across(where(is.character), ~ iconv(., from = "", to = "UTF-8", sub = "byte"))) %>%
