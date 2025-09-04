@@ -158,15 +158,16 @@ There are `r num_not_linked` schools not in the links dataset.
 
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
-summary_link_types
+summary_link_types %>%
+  kbl()
 
 ```
 
 # Examples
 
 Torriano = infant school became primary - no record of previous junior or primary
-Abbey_hill_eg = dates not match (see predecessor date section)
-Trinity_eg = fine. Just showing a school can be a predecessor of itself - academisation.
+<br>Abbey_hill_eg = dates not match (see predecessor date section)
+<br>Trinity_eg = fine. Just showing a school can be a predecessor of itself - academisation.
 
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
@@ -182,7 +183,8 @@ There are `r num_predecessor_date_diff` cases in the current links data where th
 
 ```{R, echo = FALSE, message = FALSE, warning = FALSE}
 
-predeccessor_date_diffs_30_plus 
+predeccessor_date_diffs_30_plus %>%
+  kbl()
 
 ```
 
